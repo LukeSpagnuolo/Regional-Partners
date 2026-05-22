@@ -1,6 +1,7 @@
 import os
 
 import dash
+import logging
 from dash import Dash, dcc, html, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
@@ -74,13 +75,18 @@ def initial_view(n, current_href):
     that causes a reload loop on platforms (like Posit) where the app
     is served at `APP_URL`.
     """
+    logger = logging.getLogger(__name__)
+    logger.debug("initial_view: current_href=%s APP_URL=%s", current_href, APP_URL)
+
     try:
         token = auth.get_token()
     except Exception:
-        # only redirect when we're not already at APP_URL
-        if current_href and current_href.startswith(APP_URL):
+        # redirect to the app home page (avoid root 404s on Posit)
+        desired = APP_URL.rstrip("/") + "/home"
+        if current_href and current_href.startswith(desired):
             return no_update
-        return APP_URL
+        logger.info("No token; redirecting to %s", desired)
+        return desired
 
     return no_update
 
