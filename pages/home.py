@@ -37,6 +37,8 @@ STATUS_OPTIONS = [
     {"label": "Superceded", "value": "SUPERSEDED"},
 ]
 
+HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
+
 NOM_STATUS_OPTIONS = [
     {"label": "Active (default)", "value": "ACTIVE"},
     {"label": "Expired", "value": "EXPIRED"},
@@ -157,14 +159,6 @@ filters_layout = dmc.MantineProvider(
 
         dbc.Label("Role", className="mt-3"),
         dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
-
-        dbc.Label("Enrollment Status", className="mt-3"),
-        dcc.Dropdown(
-            id="filter-enrollment-status",
-            options=STATUS_OPTIONS,
-            value=None,
-            clearable=True,
-        ),
 
         dbc.Label("Nomination Status", className="mt-3"),
         dcc.Dropdown(
@@ -385,7 +379,6 @@ def load_filters(_n):
     State("filter-sportlevel", "value"),
     State("filter-organization", "value"),
     State("filter-role", "value"),
-    State("filter-enrollment-status", "value"),
     State("filter-nomination-status", "value"),
     State("filter-nomination-redeemed", "value"),
     State("filter-card", "value"),
@@ -399,7 +392,6 @@ def apply_filters(
     sport_level,
     organization_id,
     role_id,
-    enrollment_status,
     nomination_status,
     nomination_redeemed,
     card_ids,
@@ -412,7 +404,7 @@ def apply_filters(
         "sport_level_id": sport_level,
         "sport_org_id": organization_id,
         "role_id": role_id,
-        "enrollment_status": enrollment_status,
+        "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
         "nomination_status": nomination_status,
         "nomination_redeemed": nomination_redeemed,
         "athlete_carding_ids": card_ids,
