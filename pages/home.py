@@ -473,6 +473,8 @@ def load_columns_options(_n_intervals, current_value):
             if not key:
                 continue
             label = c.get("label") or key
+            if "nomination" in str(key).lower() or "nomination" in str(label).lower():
+                continue
             options.append({"label": str(label), "value": str(key)})
 
         options.sort(key=lambda o: o["label"].lower())
