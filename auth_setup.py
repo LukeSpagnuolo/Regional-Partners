@@ -5,6 +5,8 @@ from settings import AUTH_URL, TOKEN_URL, APP_URL, CLIENT_ID, CLIENT_SECRET
 import logging
 logger = logging.getLogger(__name__)
 import os
+from flask import request, session
+from dash_auth_external.config import FLASK_SESSION_TOKEN_KEY
 
 auth = DashAuthExternal(
     AUTH_URL,
@@ -27,3 +29,24 @@ else:
 # Recommended cookie settings for deployments behind HTTPS/proxies
 server.config.setdefault("SESSION_COOKIE_SAMESITE", "None")
 server.config.setdefault("SESSION_COOKIE_SECURE", True)
+
+
+@server.before_request
+def _log_oauth_request():
+    """Log request path and whether the OAuth token is already in session.
+
+    This helps identify whether the browser ever hits `/redirect` and whether
+    the token survives the callback into the next request.
+    """
+    logger.info(
+        "request path=%s query=%s has_token_in_session=%s",
+        request.path,
+        request.query_string.decode("utf-8", errors="ignore"),
+        FLASK_SESSION_TOKEN_KEY in session,
+    )
+
+
+@server.after_request
+def _log_oauth_response(response):
+    logger.info("response path=%s status=%s", request.path, response.status_code)
+    return response
