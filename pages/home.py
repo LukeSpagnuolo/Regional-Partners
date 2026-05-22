@@ -40,18 +40,6 @@ STATUS_OPTIONS = [
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 
-NOM_STATUS_OPTIONS = [
-    {"label": "Active (default)", "value": "ACTIVE"},
-    {"label": "Expired", "value": "EXPIRED"},
-    {"label": "Superceded", "value": "SUPERSEDED"},
-]
-
-CLAIMED_STATUS_OPTIONS = [
-    {"label": "Claimed", "value": "true"},
-    {"label": "Unclaimed", "value": "false"},
-]
-
-
 def _columns_to_list(value) -> list[str]:
     if not value:
         return []
@@ -177,22 +165,6 @@ filters_layout = dmc.MantineProvider(
 
         dbc.Label("Role", className="mt-3"),
         dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
-
-        dbc.Label("Nomination Status", className="mt-3"),
-        dcc.Dropdown(
-            id="filter-nomination-status",
-            options=NOM_STATUS_OPTIONS,
-            value=None,
-            clearable=True,
-        ),
-
-        dbc.Label("Nomination Claimed", className="mt-3"),
-        dcc.Dropdown(
-            id="filter-nomination-redeemed",
-            options=CLAIMED_STATUS_OPTIONS,
-            value=None,
-            clearable=True,
-        ),
 
         filter_section("Nearest Campus"),
 
@@ -397,8 +369,6 @@ def load_filters(_n):
     State("filter-sportlevel", "value"),
     State("filter-organization", "value"),
     State("filter-role", "value"),
-    State("filter-nomination-status", "value"),
-    State("filter-nomination-redeemed", "value"),
     State("filter-card", "value"),
     State("filter-birth-campus", "value"),
     State("filter-current-campus", "value"),
@@ -410,8 +380,6 @@ def apply_filters(
     sport_level,
     organization_id,
     role_id,
-    nomination_status,
-    nomination_redeemed,
     card_ids,
     birth_campus_ids,
     current_campus_ids,
@@ -423,8 +391,6 @@ def apply_filters(
         "sport_org_id": organization_id,
         "role_id": role_id,
         "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
-        "nomination_status": nomination_status,
-        "nomination_redeemed": nomination_redeemed,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
