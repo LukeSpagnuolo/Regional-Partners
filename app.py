@@ -40,7 +40,7 @@ nav_links = [
     # Add a Login action that points to the app root (DashAuthExternal starts
     # the OAuth flow on `/`). This lets users explicitly kick off login.
 nav_links.append({'label': 'Login', 'url': APP_URL.rstrip('/') + '/'})
-navbar = Navbar(nav_links, id="navbar", title="Registration Dashboard", expand="lg")
+navbar = Navbar(nav_links, id="navbar", title="Regional Partner Registration Dashboard", expand="lg")
 navbar.register_callbacks(app)
 
 footer = Footer()
