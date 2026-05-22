@@ -1,7 +1,7 @@
 import os
 
 import dash
-from dash import Dash, dcc, html, Input, Output, no_update
+from dash import Dash, dcc, html, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
 # removing mantine for now
@@ -44,6 +44,8 @@ footer = Footer()
 app.layout = html.Div([
 
     dcc.Location(id="redirect-to", refresh=True),
+    # expose current URL so we can avoid redirecting to the same href (prevents reload loops)
+    dcc.Location(id="current-url"),
     dcc.Interval(
         id="init-interval",
         interval=500,  # e.g., 1 second after page load
@@ -62,15 +64,22 @@ app.layout = html.Div([
 
 @dash.callback(
     Output("redirect-to", "href"),
-    Input("init-interval", "n_intervals")
+    Input("init-interval", "n_intervals"),
+    State("current-url", "href"),
 )
-def initial_view(n):
-    """
-    On timeout, load filters
+def initial_view(n, current_href):
+    """On timeout, check token and redirect only when needed.
+
+    Avoid redirecting to `APP_URL` when the app is already at that URL —
+    that causes a reload loop on platforms (like Posit) where the app
+    is served at `APP_URL`.
     """
     try:
         token = auth.get_token()
-    except Exception as e:
+    except Exception:
+        # only redirect when we're not already at APP_URL
+        if current_href and current_href.startswith(APP_URL):
+            return no_update
         return APP_URL
 
     return no_update
