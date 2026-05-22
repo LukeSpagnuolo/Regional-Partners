@@ -80,15 +80,27 @@ def initial_view(n, current_href):
 
     try:
         token = auth.get_token()
-    except Exception:
+    except Exception as e:
         # redirect to the app home page (avoid root 404s on Posit)
         desired = APP_URL.rstrip("/") + "/home"
         if current_href and current_href.startswith(desired):
             return no_update
-        logger.info("No token; redirecting to %s", desired)
+        logger.warning("No token available: %s", e)
         return desired
 
     return no_update
 
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
+
+
+# Optional debug endpoint to inspect token availability during development.
+# Enable by setting environment variable `DEBUG_TOKENS=1` (do NOT enable in production).
+if os.environ.get("DEBUG_TOKENS") == "1":
+    @server.route("/_debug_token")
+    def _debug_token():
+        try:
+            t = auth.get_token()
+            return (f"token_present={bool(t)}", 200)
+        except Exception as e:
+            return (f"error={e}", 500)
