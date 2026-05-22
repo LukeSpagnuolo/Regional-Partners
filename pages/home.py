@@ -39,6 +39,7 @@ STATUS_OPTIONS = [
 
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
+HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
 
 def _columns_to_list(value) -> list[str]:
     if not value:
@@ -52,6 +53,17 @@ def _columns_to_list(value) -> list[str]:
 
 def _columns_to_param(value) -> str:
     return ",".join(_columns_to_list(value))
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen = set()
+    out = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
 
 
 # def _build_dt_columns(keys: list[str]) -> list[dict]:
@@ -128,8 +140,30 @@ def _row_enrollment_status(row) -> str:
     return ""
 
 
+def _row_sport_name(row) -> str:
+    if isinstance(row, dict):
+        if isinstance(row.get("cells"), dict):
+            row = row["cells"]
+        value = row.get("sport")
+        if value is None:
+            value = row.get("Sport")
+        if value is None:
+            value = row.get("sport_name")
+        if value is None:
+            value = row.get("sportName")
+        if value is None:
+            return ""
+        return str(_to_cell_value(value)).strip().lower()
+    return ""
+
+
 def _filter_allowed_enrollment_rows(rows: list) -> list:
-    return [row for row in rows or [] if _row_enrollment_status(row) in HIDDEN_ENROLLMENT_STATUS_SET]
+    return [
+        row
+        for row in rows or []
+        if _row_enrollment_status(row) in HIDDEN_ENROLLMENT_STATUS_SET
+        and _row_sport_name(row) not in HIDDEN_SPORTS
+    ]
 
 def filter_section(title: str, first: bool = False):
     return html.Div(
@@ -516,7 +550,8 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 
     params = {"limit": limit, "offset": offset}
     requested_columns = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(requested_columns + ["enrollment_status"])
+    fetch_columns = _dedupe_preserve_order(requested_columns + ["enrollment_status", "sport"])
+    cols = _columns_to_param(fetch_columns)
     if cols:
         params["columns"] = cols
     if isinstance(applied_filters, dict) and applied_filters:
@@ -561,7 +596,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         raise PreventUpdate
 
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(keys + ["enrollment_status"])
+    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
 
     limit = 1000
     offset = 0
