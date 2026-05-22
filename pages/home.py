@@ -38,6 +38,7 @@ STATUS_OPTIONS = [
 ]
 
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
+HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 
 NOM_STATUS_OPTIONS = [
     {"label": "Active (default)", "value": "ACTIVE"},
@@ -124,6 +125,23 @@ def _normalize_rows(rows: list, columns_value) -> list[dict]:
         out.append({k: _to_cell_value(row.get(k)) for k in keys})
 
     return out
+
+
+def _row_enrollment_status(row) -> str:
+    if isinstance(row, dict):
+        if isinstance(row.get("cells"), dict):
+            row = row["cells"]
+        value = row.get("enrollment_status")
+        if value is None:
+            value = row.get("Enrollment Status")
+        if value is None:
+            return ""
+        return str(value).strip().upper()
+    return ""
+
+
+def _filter_allowed_enrollment_rows(rows: list) -> list:
+    return [row for row in rows or [] if _row_enrollment_status(row) in HIDDEN_ENROLLMENT_STATUS_SET]
 
 def filter_section(title: str, first: bool = False):
     return html.Div(
@@ -537,7 +555,8 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     offset = max(page_current * page_size, 0)
 
     params = {"limit": limit, "offset": offset}
-    cols = _columns_to_param(columns_value)
+    requested_columns = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
+    cols = _columns_to_param(requested_columns + ["enrollment_status"])
     if cols:
         params["columns"] = cols
     if isinstance(applied_filters, dict) and applied_filters:
@@ -555,7 +574,8 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
         else:
             rows = []
 
-        data = _normalize_rows(rows, columns_value)
+        rows = _filter_allowed_enrollment_rows(rows)
+        data = _normalize_rows(rows, requested_columns)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
@@ -581,7 +601,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         raise PreventUpdate
 
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(columns_value)
+    cols = _columns_to_param(keys + ["enrollment_status"])
 
     limit = 1000
     offset = 0
@@ -612,10 +632,12 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
             total = None
             next_url = None
 
+        rows = _filter_allowed_enrollment_rows(rows)
+
         if not rows:
             break
 
-        normalized = _normalize_rows(rows, columns_value)
+        normalized = _normalize_rows(rows, keys)
         for row in normalized:
             writer.writerow(row)
 
