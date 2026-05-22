@@ -1,0 +1,5 @@
+dash
+dash-auth-external
+python-dotenv
+pandas
+dash_bootstrap_components
