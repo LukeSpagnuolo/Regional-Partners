@@ -153,7 +153,9 @@ def _row_sport_name(row) -> str:
             value = row.get("sportName")
         if value is None:
             return ""
-        return str(_to_cell_value(value)).strip().lower()
+        sport_name = str(_to_cell_value(value)).strip().lower()
+        sport_name = sport_name.replace("(test)", "")
+        return " ".join(sport_name.split())
     return ""
 
 
