@@ -139,34 +139,7 @@ def filter_section(title: str, first: bool = False):
 
 filters_layout = dmc.MantineProvider(
     [
-        filter_section("Sport Info", first=True),
-
-        dbc.Label("Organization", className="mt-3"),
-        dcc.Dropdown(id="filter-organization", options=[], value=None, clearable=True),
-
-        dbc.Label("Sport", className="mt-3"),
-        dcc.Dropdown(id="filter-sport", options=[], value=None, clearable=True),
-
-        dbc.Label("Sport Level", className="mt-3"),
-        dcc.Dropdown(id="filter-sportlevel", options=[], value=None, clearable=True),
-
-        dbc.Label("Athlete Card", className="mt-3"),
-        dmc.MultiSelect(
-            id="filter-card",
-            data=[],
-            value=[],
-            placeholder="Select carding levels...",
-            clearable=True,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
-        ),
-
-        filter_section("Registration"),
-
-        dbc.Label("Role", className="mt-3"),
-        dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
-
-        filter_section("Nearest Campus"),
+        filter_section("Nearest Campus", first=True),
 
         dbc.Label("Birthplace", className="mt-3"),
         dmc.MultiSelect(
@@ -189,6 +162,30 @@ filters_layout = dmc.MantineProvider(
             searchable=True,
             comboboxProps={"withinPortal": False, "zIndex": 2000},
         ),
+
+        filter_section("Sport Info"),
+
+        dbc.Label("Sport", className="mt-3"),
+        dcc.Dropdown(id="filter-sport", options=[], value=None, clearable=True),
+
+        dbc.Label("Sport Level", className="mt-3"),
+        dcc.Dropdown(id="filter-sportlevel", options=[], value=None, clearable=True),
+
+        dbc.Label("Athlete Card", className="mt-3"),
+        dmc.MultiSelect(
+            id="filter-card",
+            data=[],
+            value=[],
+            placeholder="Select carding levels...",
+            clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
+        ),
+
+        filter_section("Registration"),
+
+        dbc.Label("Role", className="mt-3"),
+        dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
 
         dbc.Button("Apply Filters", id="apply-filters", color="primary", className="mt-3"),
     ]
@@ -337,7 +334,6 @@ layout = dbc.Container(
     Output("filter-role", "options"),
     Output("filter-birth-campus", "data"),
     Output("filter-current-campus", "data"),
-    Output("filter-organization", "options"),
     Output("filter-sport", "options"),
     Output("filter-card", "data"),
     Output("filter-sportlevel", "options"),
@@ -351,13 +347,12 @@ def load_filters(_n):
         raise PreventUpdate
 
     campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
-    org_options = fetch_options("/api/registration/organization/", auth.get_token(), "name", "id")
     role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
     sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
     card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
     level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
 
-    return role_options, campus_options, campus_options, org_options, sport_options, card_options, level_options
+    return role_options, campus_options, campus_options, sport_options, card_options, level_options
 
 
 @dash.callback(
@@ -367,7 +362,6 @@ def load_filters(_n):
     Input("apply-filters", "n_clicks"),
     State("filter-sport", "value"),
     State("filter-sportlevel", "value"),
-    State("filter-organization", "value"),
     State("filter-role", "value"),
     State("filter-card", "value"),
     State("filter-birth-campus", "value"),
@@ -378,7 +372,6 @@ def apply_filters(
     _n,
     sport_id,
     sport_level,
-    organization_id,
     role_id,
     card_ids,
     birth_campus_ids,
@@ -388,7 +381,6 @@ def apply_filters(
     raw = {
         "sport_id": sport_id,
         "sport_level_id": sport_level,
-        "sport_org_id": organization_id,
         "role_id": role_id,
         "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
         "athlete_carding_ids": card_ids,
