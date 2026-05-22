@@ -81,9 +81,11 @@ def initial_view(n, current_href):
     try:
         token = auth.get_token()
     except Exception as e:
-        # redirect to the app home page (avoid root 404s on Posit)
-        desired = APP_URL.rstrip("/") + "/home"
-        if current_href and current_href.startswith(desired):
+        # send unauthenticated users to the auth entrypoint at the app root.
+        # DashAuthExternal registers the login flow on `/` and the callback
+        # exchange on `/redirect`; redirecting straight to `/home` bypasses it.
+        desired = APP_URL.rstrip("/") + "/"
+        if current_href and current_href.rstrip("/") == desired.rstrip("/"):
             return no_update
         logger.warning("No token available: %s", e)
         return desired
