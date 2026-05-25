@@ -265,7 +265,7 @@ fields_panel = OffcanvasComponent(
 
 layout = dbc.Container(
     [
-        dcc.Interval(id="init-load", interval=500, n_intervals=0),
+        dcc.Interval(id="init-load", interval=1, n_intervals=0, max_intervals=1),
 
         dcc.Store(id="columns-meta-store"),
         dcc.Store(id="applied-filters-store", data={}),
@@ -367,7 +367,6 @@ layout = dbc.Container(
 
 
 @dash.callback(
-    Output("init-load", "disabled"),
     Output("filter-role", "options"),
     Output("filter-birth-campus", "data"),
     Output("filter-current-campus", "data"),
@@ -386,10 +385,10 @@ def load_filters(_n):
     campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
     role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
     sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
-    card_options = fetch_options("/api/registration/card/", auth.get_token(), "name", "id")
+    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
     level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
 
-    return True, role_options, campus_options, campus_options, sport_options, card_options, level_options
+    return role_options, campus_options, campus_options, sport_options, card_options, level_options
 
 
 @dash.callback(
@@ -419,6 +418,7 @@ def apply_filters(
         "sport_id": sport_id,
         "sport_level_id": sport_level,
         "role_id": role_id,
+        "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
@@ -483,17 +483,6 @@ def load_columns_options(_n_intervals, current_value):
         return options, current, current, payload, "Loaded columns metadata.", "success", True
 
     except ReportingClientError as e:
-        message = str(e)
-        if "403 Forbidden" in message or "403" in message:
-            return (
-                SEEDED_OPTIONS,
-                current,
-                current,
-                None,
-                "Column metadata is not available for this account; using default columns.",
-                "warning",
-                True,
-            )
         return (
             SEEDED_OPTIONS,
             current,
