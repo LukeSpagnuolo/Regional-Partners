@@ -265,7 +265,7 @@ fields_panel = OffcanvasComponent(
 
 layout = dbc.Container(
     [
-        dcc.Interval(id="init-load", interval=1, n_intervals=0, max_intervals=1),
+        dcc.Interval(id="init-load", interval=500, n_intervals=0),
 
         dcc.Store(id="columns-meta-store"),
         dcc.Store(id="applied-filters-store", data={}),
@@ -367,6 +367,7 @@ layout = dbc.Container(
 
 
 @dash.callback(
+    Output("init-load", "disabled"),
     Output("filter-role", "options"),
     Output("filter-birth-campus", "data"),
     Output("filter-current-campus", "data"),
@@ -385,10 +386,10 @@ def load_filters(_n):
     campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
     role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
     sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
-    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
+    card_options = fetch_options("/api/registration/card/", auth.get_token(), "name", "id")
     level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
 
-    return role_options, campus_options, campus_options, sport_options, card_options, level_options
+    return True, role_options, campus_options, campus_options, sport_options, card_options, level_options
 
 
 @dash.callback(
