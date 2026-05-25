@@ -232,7 +232,7 @@ def _apply_visible_filters(rows: list, applied_filters: dict | None) -> list:
     for row in filtered:
         if not _row_field_matches(row, "sport", applied_filters.get("sport_id")):
             continue
-        if not _row_field_matches(row, "coach_level", applied_filters.get("sport_level_id")):
+        if not _row_field_matches(row, "athlete_carding", applied_filters.get("sport_level_id")):
             continue
         if not _row_field_matches(row, "role", applied_filters.get("role_id")):
             continue
@@ -249,7 +249,7 @@ def _apply_visible_filters(rows: list, applied_filters: dict | None) -> list:
 
 FILTER_PARAM_MAP = {
     "sport_id": "sport",
-    "sport_level_id": "coach_level",
+    "sport_level_id": "athlete_carding",
     "role_id": "role",
     "athlete_carding_ids": "athlete_carding",
     "birth_city_campus_id": "birth_city_campus",
