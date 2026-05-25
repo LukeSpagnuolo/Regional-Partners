@@ -628,7 +628,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
             rows = []
 
         rows = _apply_local_filters(rows, applied_filters)
-    data = _normalize_rows(rows, keys)
+        data = _normalize_rows(rows, keys)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
