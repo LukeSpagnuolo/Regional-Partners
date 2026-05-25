@@ -308,17 +308,12 @@ filters_layout = dmc.MantineProvider(
         dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
 
         dbc.Label("Enrollment Status", className="mt-3"),
-        dmc.MultiSelect(
+        dcc.Dropdown(
             id="filter-enrollment-status",
-            data=ENROLLMENT_STATUS_OPTIONS,
-            value=["ACTIVE", "EXPIRED"],
-            placeholder="Select enrollment statuses...",
+            options=ENROLLMENT_STATUS_OPTIONS,
+            value="ACTIVE",
             clearable=False,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
         ),
-
-        dbc.FormText("At least one enrollment status is required.", className="text-muted"),
 
         dbc.Button("Apply Filters", id="apply-filters", color="primary", className="mt-3"),
     ]
@@ -365,7 +360,7 @@ layout = dbc.Container(
         dcc.Interval(id="init-load", interval=1, n_intervals=0, max_intervals=1),
 
         dcc.Store(id="columns-meta-store"),
-        dcc.Store(id="applied-filters-store", data={"enrollment_status": ["ACTIVE", "EXPIRED"]}),
+        dcc.Store(id="applied-filters-store", data={"enrollment_status": "ACTIVE"}),
         dcc.Store(id="applied-columns-store", data=DEFAULT_COLUMNS),
         dcc.Download(id="download-csv"),
 
@@ -528,15 +523,6 @@ def apply_filters(
     }
     applied = filters_to_params(raw)
     return applied, False, 0
-
-
-@dash.callback(
-    Output("filter-enrollment-status", "value"),
-    Input("filter-enrollment-status", "value"),
-    prevent_initial_call=False,
-)
-def require_enrollment_selection(enrollment_status):
-    return enrollment_status or ["ACTIVE", "EXPIRED"]
 
 
 @dash.callback(
