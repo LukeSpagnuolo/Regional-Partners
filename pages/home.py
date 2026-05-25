@@ -24,7 +24,7 @@ cfg = ReportingAPIConfig(
 )
 reporting = ReportingClient(cfg, token_getter=auth.get_token)
 
-DEFAULT_COLUMNS = ["first_name", "last_name", "sport", "email"]
+DEFAULT_COLUMNS = ["last_name", "first_name", "athlete_ethnicity"]
 DEFAULT_PAGE_SIZE = 25
 
 SEEDED_OPTIONS = [{"label": k, "value": k} for k in DEFAULT_COLUMNS]
@@ -35,6 +35,17 @@ STATUS_OPTIONS = [
     {"label": "Pending", "value": "PENDING"},
     {"label": "Expired", "value": "EXPIRED"},
     {"label": "Superceded", "value": "SUPERSEDED"},
+]
+
+NOM_STATUS_OPTIONS = [
+    {"label": "Active (default)", "value": "ACTIVE"},
+    {"label": "Expired", "value": "EXPIRED"},
+    {"label": "Superceded", "value": "SUPERSEDED"},
+]
+
+CLAIMED_STATUS_OPTIONS = [
+    {"label": "Claimed", "value": "true"},
+    {"label": "Unclaimed", "value": "false"},
 ]
 
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
@@ -223,37 +234,6 @@ def _apply_local_filters(rows: list) -> list:
     return filtered
 
 
-def _apply_visible_filters(rows: list, applied_filters: dict | None) -> list:
-    filtered = _filter_allowed_enrollment_rows(rows)
-    if not isinstance(applied_filters, dict) or not applied_filters:
-        return filtered
-
-    sport_level_values = applied_filters.get("sport_level_id")
-    card_values = applied_filters.get("athlete_carding_ids")
-    if sport_level_values and card_values:
-        athlete_carding_values = list(dict.fromkeys(
-            _columns_to_list(sport_level_values) + _columns_to_list(card_values)
-        ))
-    else:
-        athlete_carding_values = sport_level_values or card_values
-
-    out = []
-    for row in filtered:
-        if not _row_field_matches(row, "sport", applied_filters.get("sport_id")):
-            continue
-        if not _row_field_matches(row, "role", applied_filters.get("role_id")):
-            continue
-        if not _row_field_matches(row, "athlete_carding", athlete_carding_values):
-            continue
-        if not _row_field_matches(row, "birth_city_campus", applied_filters.get("birth_city_campus_id")):
-            continue
-        if not _row_field_matches(row, "residence_city_campus", applied_filters.get("residence_city_campus_id")):
-            continue
-        out.append(row)
-
-    return out
-
-
 FILTER_PARAM_MAP = {
     "sport_id": "sport",
     "sport_level_id": "athlete_carding",
@@ -265,20 +245,13 @@ FILTER_PARAM_MAP = {
 
 
 def _applied_filters_to_params(applied_filters: dict | None) -> dict:
-    mapped: dict[str, list] = {}
+    mapped = {}
     for key, value in (applied_filters or {}).items():
         param_name = FILTER_PARAM_MAP.get(key)
         if not param_name:
             continue
-        if param_name not in mapped:
-            mapped[param_name] = []
-        mapped[param_name].extend(_columns_to_list(value) or [value])
-
-    merged = {}
-    for key, values in mapped.items():
-        merged[key] = list(dict.fromkeys(str(v) for v in values if str(v).strip()))
-
-    return filters_to_params(merged)
+        mapped[param_name] = value
+    return filters_to_params(mapped)
 
 
 def filter_section(title: str, first: bool = False):
@@ -289,31 +262,10 @@ def filter_section(title: str, first: bool = False):
 
 filters_layout = dmc.MantineProvider(
     [
-        filter_section("Nearest Campus", first=True),
+        filter_section("Sport Info", first=True),
 
-        dbc.Label("Birthplace", className="mt-3"),
-        dmc.MultiSelect(
-            id="filter-birth-campus",
-            data=[],
-            value=[],
-            placeholder="Select Campuses...",
-            clearable=True,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
-        ),
-
-        dbc.Label("Residence Campus", className="mt-3"),
-        dmc.MultiSelect(
-            id="filter-current-campus",
-            data=[],
-            value=[],
-            placeholder="Select Campuses...",
-            clearable=True,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
-        ),
-
-        filter_section("Sport Info"),
+        dbc.Label("Organization", className="mt-3"),
+        dcc.Dropdown(id="filter-organization", options=[], value=None, clearable=True),
 
         dbc.Label("Sport", className="mt-3"),
         dcc.Dropdown(id="filter-sport", options=[], value=None, clearable=True),
@@ -336,6 +288,54 @@ filters_layout = dmc.MantineProvider(
 
         dbc.Label("Role", className="mt-3"),
         dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
+
+        dbc.Label("Enrollment Status", className="mt-3"),
+        dcc.Dropdown(
+            id="filter-enrollment-status",
+            options=STATUS_OPTIONS,
+            value=None,
+            clearable=True,
+        ),
+
+        dbc.Label("Nomination Status", className="mt-3"),
+        dcc.Dropdown(
+            id="filter-nomination-status",
+            options=NOM_STATUS_OPTIONS,
+            value=None,
+            clearable=True,
+        ),
+
+        dbc.Label("Nomination Claimed", className="mt-3"),
+        dcc.Dropdown(
+            id="filter-nomination-redeemed",
+            options=CLAIMED_STATUS_OPTIONS,
+            value=None,
+            clearable=True,
+        ),
+
+        filter_section("Nearest Campus"),
+
+        dbc.Label("Birthplace", className="mt-3"),
+        dmc.MultiSelect(
+            id="filter-birth-campus",
+            data=[],
+            value=[],
+            placeholder="Select Campuses...",
+            clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
+        ),
+
+        dbc.Label("Current Residence", className="mt-3"),
+        dmc.MultiSelect(
+            id="filter-current-campus",
+            data=[],
+            value=[],
+            placeholder="Select Campuses...",
+            clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
+        ),
 
         dbc.Button("Apply Filters", id="apply-filters", color="primary", className="mt-3"),
     ]
@@ -484,6 +484,7 @@ layout = dbc.Container(
     Output("filter-role", "options"),
     Output("filter-birth-campus", "data"),
     Output("filter-current-campus", "data"),
+    Output("filter-organization", "options"),
     Output("filter-sport", "options"),
     Output("filter-card", "data"),
     Output("filter-sportlevel", "options"),
@@ -497,12 +498,13 @@ def load_filters(_n):
         raise PreventUpdate
 
     campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
+    org_options = fetch_options("/api/registration/organization/", auth.get_token(), "name", "id")
     role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
     sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
     card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
     level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
 
-    return role_options, campus_options, campus_options, sport_options, card_options, level_options
+    return role_options, campus_options, campus_options, org_options, sport_options, card_options, level_options
 
 
 @dash.callback(
@@ -512,7 +514,11 @@ def load_filters(_n):
     Input("apply-filters", "n_clicks"),
     State("filter-sport", "value"),
     State("filter-sportlevel", "value"),
+    State("filter-organization", "value"),
     State("filter-role", "value"),
+    State("filter-enrollment-status", "value"),
+    State("filter-nomination-status", "value"),
+    State("filter-nomination-redeemed", "value"),
     State("filter-card", "value"),
     State("filter-birth-campus", "value"),
     State("filter-current-campus", "value"),
@@ -522,7 +528,11 @@ def apply_filters(
     _n,
     sport_id,
     sport_level,
+    organization_id,
     role_id,
+    enrollment_status,
+    nomination_status,
+    nomination_redeemed,
     card_ids,
     birth_campus_ids,
     current_campus_ids,
@@ -530,12 +540,17 @@ def apply_filters(
     raw = {
         "sport_id": sport_id,
         "sport_level_id": sport_level,
+        "sport_org_id": organization_id,
         "role_id": role_id,
+        "enrollment_status": enrollment_status,
+        "nomination_status": nomination_status,
+        "nomination_redeemed": nomination_redeemed,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
     }
-    return raw, False, 0
+    applied = filters_to_params(raw)
+    return applied, False, 0
 
 
 @dash.callback(
@@ -658,23 +673,25 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     offset = max(page_current * page_size, 0)
     params = {"limit": limit, "offset": offset}
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
+    cols = _columns_to_param(columns_value)
     if cols:
         params["columns"] = cols
-    params.update(_applied_filters_to_params(applied_filters))
+    if isinstance(applied_filters, dict) and applied_filters:
+        params.update(applied_filters)
 
     try:
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
 
         if isinstance(payload, dict) and "results" in payload:
             rows = payload.get("results") or []
+            total = payload.get("count", None)
+            _ = total
         elif isinstance(payload, list):
             rows = payload
         else:
             rows = []
 
-        rows = _apply_local_filters(rows)
-        data = _normalize_rows(rows, keys)
+        data = _normalize_rows(rows, columns_value)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
@@ -686,13 +703,11 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 @dash.callback(
     Output("download-csv", "data"),
     Input("download-csv-btn", "n_clicks"),
-    State("rows-table", "page_current"),
-    State("rows-table", "page_size"),
     State("applied-columns-store", "data"),
     State("applied-filters-store", "data"),
     prevent_initial_call=True,
 )
-def download_full_dataset(n_clicks, page_current, page_size, columns_value, applied_filters):
+def download_full_dataset(n_clicks, columns_value, applied_filters):
     if not n_clicks:
         return no_update
 
@@ -701,38 +716,52 @@ def download_full_dataset(n_clicks, page_current, page_size, columns_value, appl
     except Exception:
         raise PreventUpdate
 
-    keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
-
-    page_current = int(page_current or 0)
-    page_size = int(page_size or DEFAULT_PAGE_SIZE)
-    limit = max(page_size, 1)
-    offset = max(page_current * page_size, 0)
-
-    params = {"limit": limit, "offset": offset}
-    if cols:
-        params["columns"] = cols
-    params.update(_applied_filters_to_params(applied_filters))
-
-    payload = reporting._GET_json(reporting.config.rows_url, params=params)
-
-    if isinstance(payload, dict) and "results" in payload:
-        rows = payload.get("results") or []
-    elif isinstance(payload, list):
-        rows = payload
-    else:
-        rows = []
-
-    rows = _apply_local_filters(rows)
-
     buf = io.StringIO()
+    keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
+    cols = _columns_to_param(columns_value)
     writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
     writer.writeheader()
 
-    if rows:
-        normalized = _normalize_rows(rows, keys)
+    limit = 1000
+    offset = 0
+
+    while True:
+        params = {"limit": limit, "offset": offset}
+        if cols:
+            params["columns"] = cols
+        if isinstance(applied_filters, dict) and applied_filters:
+            params.update(applied_filters)
+
+        payload = reporting._GET_json(reporting.config.rows_url, params=params)
+
+        if isinstance(payload, dict):
+            rows = payload.get("results") or []
+            total = payload.get("count")
+            next_url = payload.get("next")
+        elif isinstance(payload, list):
+            rows = payload
+            total = None
+            next_url = None
+        else:
+            rows = []
+            total = None
+            next_url = None
+
+        if not rows:
+            break
+
+        normalized = _normalize_rows(rows, columns_value)
         for row in normalized:
             writer.writerow(row)
+
+        if next_url:
+            offset += len(rows)
+            continue
+
+        if total is not None and (offset + len(rows)) >= int(total):
+            break
+
+        offset += len(rows)
 
     filename = f"report_rows_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     return dict(content=buf.getvalue(), filename=filename, type="text/csv")
