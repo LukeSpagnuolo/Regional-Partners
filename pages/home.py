@@ -13,7 +13,7 @@ from settings import SITE_URL, REPORT_ROWS_ENDPOINT
 from apps.reporting_client import ReportingAPIConfig, ReportingClient, ReportingClientError
 from auth_setup import auth
 
-from apps.utils import fetch_options
+from apps.utils import fetch_options, filters_to_params
 from layout.offcanvas import OffcanvasComponent
 
 dash.register_page(__name__, path="/home")
@@ -240,6 +240,26 @@ def _apply_local_filters(rows: list, applied_filters: dict | None) -> list:
         out.append(row)
 
     return out
+
+
+FILTER_PARAM_MAP = {
+    "sport_id": "sport",
+    "sport_level_id": "coach_level",
+    "role_id": "role",
+    "athlete_carding_ids": "athlete_carding",
+    "birth_city_campus_id": "birth_city_campus",
+    "residence_city_campus_id": "current_residence",
+}
+
+
+def _applied_filters_to_params(applied_filters: dict | None) -> dict:
+    mapped = {}
+    for key, value in (applied_filters or {}).items():
+        param_name = FILTER_PARAM_MAP.get(key)
+        if not param_name:
+            continue
+        mapped[param_name] = value
+    return filters_to_params(mapped)
 
 
 def _fetch_all_report_rows(params: dict) -> list:
@@ -652,6 +672,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
     if cols:
         params["columns"] = cols
+    params.update(_applied_filters_to_params(applied_filters))
 
     try:
         rows = _fetch_all_report_rows(params)
@@ -699,6 +720,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         params = {"limit": limit, "offset": offset}
         if cols:
             params["columns"] = cols
+        params.update(_applied_filters_to_params(applied_filters))
 
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
 
