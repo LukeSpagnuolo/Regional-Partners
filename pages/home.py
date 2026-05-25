@@ -223,6 +223,30 @@ def _apply_local_filters(rows: list) -> list:
     return filtered
 
 
+def _apply_visible_filters(rows: list, applied_filters: dict | None) -> list:
+    filtered = _filter_allowed_enrollment_rows(rows)
+    if not isinstance(applied_filters, dict) or not applied_filters:
+        return filtered
+
+    out = []
+    for row in filtered:
+        if not _row_field_matches(row, "sport", applied_filters.get("sport_id")):
+            continue
+        if not _row_field_matches(row, "coach_level", applied_filters.get("sport_level_id")):
+            continue
+        if not _row_field_matches(row, "role", applied_filters.get("role_id")):
+            continue
+        if not _row_field_matches(row, "athlete_carding", applied_filters.get("athlete_carding_ids")):
+            continue
+        if not _row_field_matches(row, "birth_city_campus", applied_filters.get("birth_city_campus_id")):
+            continue
+        if not _row_field_matches(row, "residence_city_campus", applied_filters.get("residence_city_campus_id")):
+            continue
+        out.append(row)
+
+    return out
+
+
 FILTER_PARAM_MAP = {
     "sport_id": "sport",
     "sport_level_id": "coach_level",
@@ -635,7 +659,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
         else:
             rows = []
 
-        rows = _apply_local_filters(rows)
+        rows = _apply_visible_filters(rows, applied_filters)
         data = _normalize_rows(rows, keys)
         return data, no_update, no_update, no_update
 
@@ -693,7 +717,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
             next_url = None
 
         page_row_count = len(rows)
-        rows = _apply_local_filters(rows)
+        rows = _apply_visible_filters(rows, applied_filters)
 
         if rows:
             normalized = _normalize_rows(rows, keys)

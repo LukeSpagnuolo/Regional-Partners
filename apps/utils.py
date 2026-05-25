@@ -40,7 +40,7 @@ def filters_to_params(raw: dict) -> dict:
             v = [x for x in v if x not in (None, "", [])]
             if not v:
                 continue
-            out[k] = ",".join(str(x) for x in v)
+            out[k] = [str(x) for x in v]
             continue
         out[k] = v
     return out
