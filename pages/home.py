@@ -290,11 +290,14 @@ filters_layout = dmc.MantineProvider(
         dcc.Dropdown(id="filter-role", options=[], value=None, clearable=True),
 
         dbc.Label("Enrollment Status", className="mt-3"),
-        dcc.Dropdown(
+        dmc.MultiSelect(
             id="filter-enrollment-status",
-            options=STATUS_OPTIONS,
-            value=None,
+            data=STATUS_OPTIONS,
+            value=[],
+            placeholder="Select enrollment statuses...",
             clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
         ),
 
         dbc.Label("Nomination Status", className="mt-3"),
