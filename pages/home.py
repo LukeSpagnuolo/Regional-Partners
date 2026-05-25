@@ -43,12 +43,11 @@ HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
 FILTER_FETCH_COLUMNS = [
     "enrollment_status",
     "sport",
-    "sport_id",
-    "sport_level_id",
-    "role_id",
-    "athlete_carding_ids",
-    "birth_city_campus_id",
-    "residence_city_campus_id",
+    "coach_level",
+    "role",
+    "athlete_carding",
+    "birth_city_campus",
+    "current_residence",
 ]
 
 def _columns_to_list(value) -> list[str]:
@@ -226,17 +225,17 @@ def _apply_local_filters(rows: list, applied_filters: dict | None) -> list:
 
     out = []
     for row in filtered:
-        if not _row_field_matches(row, "sport_id", applied_filters.get("sport_id")):
+        if not _row_field_matches(row, "sport", applied_filters.get("sport_id")):
             continue
-        if not _row_field_matches(row, "sport_level_id", applied_filters.get("sport_level_id")):
+        if not _row_field_matches(row, "coach_level", applied_filters.get("sport_level_id")):
             continue
-        if not _row_field_matches(row, "role_id", applied_filters.get("role_id")):
+        if not _row_field_matches(row, "role", applied_filters.get("role_id")):
             continue
-        if not _row_field_matches(row, "athlete_carding_ids", applied_filters.get("athlete_carding_ids")):
+        if not _row_field_matches(row, "athlete_carding", applied_filters.get("athlete_carding_ids")):
             continue
-        if not _row_field_matches(row, "birth_city_campus_id", applied_filters.get("birth_city_campus_id")):
+        if not _row_field_matches(row, "birth_city_campus", applied_filters.get("birth_city_campus_id")):
             continue
-        if not _row_field_matches(row, "residence_city_campus_id", applied_filters.get("residence_city_campus_id")):
+        if not _row_field_matches(row, "current_residence", applied_filters.get("residence_city_campus_id")):
             continue
         out.append(row)
 
@@ -457,11 +456,11 @@ def load_filters(_n):
     except Exception:
         raise PreventUpdate
 
-    campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
-    role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
-    sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
-    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
-    level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
+    campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "name")
+    role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "verbose_name")
+    sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "name")
+    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "name")
+    level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "name")
 
     return role_options, campus_options, campus_options, sport_options, card_options, level_options
 
