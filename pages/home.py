@@ -173,11 +173,29 @@ def _row_sport_name(row) -> str:
     return ""
 
 
+def _row_sport_value(row) -> str:
+    if isinstance(row, dict):
+        if isinstance(row.get("cells"), dict):
+            row = row["cells"]
+        value = row.get("sport")
+        if value is None:
+            value = row.get("Sport")
+        if value is None:
+            value = row.get("sport_name")
+        if value is None:
+            value = row.get("sportName")
+        if value is None:
+            return ""
+        return str(_to_cell_value(value)).strip().lower()
+    return ""
+
+
 def _filter_allowed_enrollment_rows(rows: list) -> list:
     return [
         row
         for row in rows or []
         if _row_enrollment_status(row) in HIDDEN_ENROLLMENT_STATUS_SET
+        and "(test)" not in _row_sport_value(row)
         and _row_sport_name(row) not in HIDDEN_SPORTS
     ]
 
@@ -663,7 +681,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
         else:
             rows = []
 
-        data = _normalize_rows(rows, columns_value)
+        data = _normalize_rows(_apply_local_filters(rows), columns_value)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
@@ -722,7 +740,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         if not rows:
             break
 
-        normalized = _normalize_rows(rows, columns_value)
+        normalized = _normalize_rows(_apply_local_filters(rows), columns_value)
         for row in normalized:
             writer.writerow(row)
 
