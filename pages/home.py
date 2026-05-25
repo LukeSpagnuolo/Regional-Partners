@@ -40,6 +40,16 @@ STATUS_OPTIONS = [
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
+FILTER_FETCH_COLUMNS = [
+    "enrollment_status",
+    "sport",
+    "sport_id",
+    "sport_level_id",
+    "role_id",
+    "athlete_carding_ids",
+    "birth_city_campus_id",
+    "residence_city_campus_id",
+]
 
 def _columns_to_list(value) -> list[str]:
     if not value:
@@ -535,12 +545,8 @@ def load_columns_options(_n_intervals, current_value):
 
         options.sort(key=lambda o: o["label"].lower())
 
-        valid = {o["value"] for o in options}
-        current = [v for v in current if v in valid]
-
         if not current:
-            fallback = [v for v in DEFAULT_COLUMNS if v in valid]
-            current = fallback or ([options[0]["value"]] if options else [])
+            current = list(DEFAULT_COLUMNS)
 
         return options, current, current, payload, "Loaded columns metadata.", "success", True
 
@@ -614,7 +620,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 
     params = {"limit": limit, "offset": offset}
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
+    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
     if cols:
         params["columns"] = cols
 
@@ -660,7 +666,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
 
     limit = 1000
     offset = 0
-    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
+    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
 
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
