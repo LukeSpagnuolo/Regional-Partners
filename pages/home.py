@@ -47,7 +47,7 @@ FILTER_FETCH_COLUMNS = [
     "role",
     "athlete_carding",
     "birth_city_campus",
-    "current_residence",
+    "residence_city_campus",
 ]
 
 def _columns_to_list(value) -> list[str]:
@@ -229,7 +229,7 @@ FILTER_PARAM_MAP = {
     "role_id": "role",
     "athlete_carding_ids": "athlete_carding",
     "birth_city_campus_id": "birth_city_campus",
-    "residence_city_campus_id": "current_residence",
+    "residence_city_campus_id": "residence_city_campus",
 }
 
 
@@ -264,7 +264,7 @@ filters_layout = dmc.MantineProvider(
             comboboxProps={"withinPortal": False, "zIndex": 2000},
         ),
 
-        dbc.Label("Current Residence", className="mt-3"),
+        dbc.Label("Residence Campus", className="mt-3"),
         dmc.MultiSelect(
             id="filter-current-campus",
             data=[],
