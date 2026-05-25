@@ -218,7 +218,7 @@ def _row_field_matches(row, field_name: str, selected_values) -> bool:
     return bool(row_values & selected)
 
 
-def _apply_local_filters(rows: list, applied_filters: dict | None) -> list:
+def _apply_local_filters(rows: list) -> list:
     filtered = _filter_allowed_enrollment_rows(rows)
     return filtered
 
