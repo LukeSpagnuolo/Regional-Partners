@@ -228,15 +228,22 @@ def _apply_visible_filters(rows: list, applied_filters: dict | None) -> list:
     if not isinstance(applied_filters, dict) or not applied_filters:
         return filtered
 
+    sport_level_values = applied_filters.get("sport_level_id")
+    card_values = applied_filters.get("athlete_carding_ids")
+    if sport_level_values and card_values:
+        athlete_carding_values = list(dict.fromkeys(
+            _columns_to_list(sport_level_values) + _columns_to_list(card_values)
+        ))
+    else:
+        athlete_carding_values = sport_level_values or card_values
+
     out = []
     for row in filtered:
         if not _row_field_matches(row, "sport", applied_filters.get("sport_id")):
             continue
-        if not _row_field_matches(row, "athlete_carding", applied_filters.get("sport_level_id")):
-            continue
         if not _row_field_matches(row, "role", applied_filters.get("role_id")):
             continue
-        if not _row_field_matches(row, "athlete_carding", applied_filters.get("athlete_carding_ids")):
+        if not _row_field_matches(row, "athlete_carding", athlete_carding_values):
             continue
         if not _row_field_matches(row, "birth_city_campus", applied_filters.get("birth_city_campus_id")):
             continue
@@ -258,13 +265,20 @@ FILTER_PARAM_MAP = {
 
 
 def _applied_filters_to_params(applied_filters: dict | None) -> dict:
-    mapped = {}
+    mapped: dict[str, list] = {}
     for key, value in (applied_filters or {}).items():
         param_name = FILTER_PARAM_MAP.get(key)
         if not param_name:
             continue
-        mapped[param_name] = value
-    return filters_to_params(mapped)
+        if param_name not in mapped:
+            mapped[param_name] = []
+        mapped[param_name].extend(_columns_to_list(value) or [value])
+
+    merged = {}
+    for key, values in mapped.items():
+        merged[key] = list(dict.fromkeys(str(v) for v in values if str(v).strip()))
+
+    return filters_to_params(merged)
 
 
 def filter_section(title: str, first: bool = False):
@@ -672,11 +686,13 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 @dash.callback(
     Output("download-csv", "data"),
     Input("download-csv-btn", "n_clicks"),
+    State("rows-table", "page_current"),
+    State("rows-table", "page_size"),
     State("applied-columns-store", "data"),
     State("applied-filters-store", "data"),
     prevent_initial_call=True,
 )
-def download_full_dataset(n_clicks, columns_value, applied_filters):
+def download_full_dataset(n_clicks, page_current, page_size, columns_value, applied_filters):
     if not n_clicks:
         return no_update
 
@@ -686,55 +702,37 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         raise PreventUpdate
 
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-
-    limit = 1000
-    offset = 0
     cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
+
+    page_current = int(page_current or 0)
+    page_size = int(page_size or DEFAULT_PAGE_SIZE)
+    limit = max(page_size, 1)
+    offset = max(page_current * page_size, 0)
+
+    params = {"limit": limit, "offset": offset}
+    if cols:
+        params["columns"] = cols
+    params.update(_applied_filters_to_params(applied_filters))
+
+    payload = reporting._GET_json(reporting.config.rows_url, params=params)
+
+    if isinstance(payload, dict) and "results" in payload:
+        rows = payload.get("results") or []
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        rows = []
+
+    rows = _apply_local_filters(rows)
 
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
     writer.writeheader()
 
-    while True:
-        params = {"limit": limit, "offset": offset}
-        if cols:
-            params["columns"] = cols
-        params.update(_applied_filters_to_params(applied_filters))
-
-        payload = reporting._GET_json(reporting.config.rows_url, params=params)
-
-        if isinstance(payload, dict):
-            rows = payload.get("results") or []
-            total = payload.get("count")
-            next_url = payload.get("next")
-        elif isinstance(payload, list):
-            rows = payload
-            total = None
-            next_url = None
-        else:
-            rows = []
-            total = None
-            next_url = None
-
-        page_row_count = len(rows)
-        rows = _apply_local_filters(rows)
-
-        if rows:
-            normalized = _normalize_rows(rows, keys)
-            for row in normalized:
-                writer.writerow(row)
-
-        if next_url:
-            offset += page_row_count
-            continue
-
-        if total is not None and (offset + page_row_count) >= int(total):
-            break
-
-        if page_row_count == 0:
-            break
-
-        offset += page_row_count
+    if rows:
+        normalized = _normalize_rows(rows, keys)
+        for row in normalized:
+            writer.writerow(row)
 
     filename = f"report_rows_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     return dict(content=buf.getvalue(), filename=filename, type="text/csv")
