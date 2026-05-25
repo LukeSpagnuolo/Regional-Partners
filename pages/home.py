@@ -13,7 +13,7 @@ from settings import SITE_URL, REPORT_ROWS_ENDPOINT
 from apps.reporting_client import ReportingAPIConfig, ReportingClient, ReportingClientError
 from auth_setup import auth
 
-from apps.utils import fetch_options, filters_to_params
+from apps.utils import fetch_options
 from layout.offcanvas import OffcanvasComponent
 
 dash.register_page(__name__, path="/home")
@@ -40,6 +40,16 @@ STATUS_OPTIONS = [
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
+FILTER_FETCH_COLUMNS = [
+    "enrollment_status",
+    "sport",
+    "sport_id",
+    "sport_level_id",
+    "role_id",
+    "athlete_carding_ids",
+    "birth_city_campus_id",
+    "residence_city_campus_id",
+]
 
 def _columns_to_list(value) -> list[str]:
     if not value:
@@ -166,6 +176,71 @@ def _filter_allowed_enrollment_rows(rows: list) -> list:
         if _row_enrollment_status(row) in HIDDEN_ENROLLMENT_STATUS_SET
         and _row_sport_name(row) not in HIDDEN_SPORTS
     ]
+
+
+def _value_to_set(value) -> set[str]:
+    if value is None:
+        return set()
+    if isinstance(value, dict):
+        values = [
+            value.get("id"),
+            value.get("value"),
+            value.get("key"),
+            value.get("label"),
+            value.get("name"),
+        ]
+        return {str(item).strip() for item in values if str(item).strip()}
+    if isinstance(value, (list, tuple, set)):
+        values: set[str] = set()
+        for item in value:
+            values.update(_value_to_set(item))
+        return values
+
+    text = str(value).strip()
+    if not text:
+        return set()
+    return {part.strip() for part in text.split(",") if part.strip()}
+
+
+def _row_field_matches(row, field_name: str, selected_values) -> bool:
+    selected = _value_to_set(selected_values)
+    if not selected:
+        return True
+
+    if not isinstance(row, dict):
+        return False
+
+    if isinstance(row.get("cells"), dict):
+        row = row["cells"]
+
+    row_values = _value_to_set(row.get(field_name))
+    if not row_values:
+        return False
+    return bool(row_values & selected)
+
+
+def _apply_local_filters(rows: list, applied_filters: dict | None) -> list:
+    filtered = _filter_allowed_enrollment_rows(rows)
+    if not isinstance(applied_filters, dict) or not applied_filters:
+        return filtered
+
+    out = []
+    for row in filtered:
+        if not _row_field_matches(row, "sport_id", applied_filters.get("sport_id")):
+            continue
+        if not _row_field_matches(row, "sport_level_id", applied_filters.get("sport_level_id")):
+            continue
+        if not _row_field_matches(row, "role_id", applied_filters.get("role_id")):
+            continue
+        if not _row_field_matches(row, "athlete_carding_ids", applied_filters.get("athlete_carding_ids")):
+            continue
+        if not _row_field_matches(row, "birth_city_campus_id", applied_filters.get("birth_city_campus_id")):
+            continue
+        if not _row_field_matches(row, "residence_city_campus_id", applied_filters.get("residence_city_campus_id")):
+            continue
+        out.append(row)
+
+    return out
 
 def filter_section(title: str, first: bool = False):
     return html.Div(
@@ -413,18 +488,15 @@ def apply_filters(
     birth_campus_ids,
     current_campus_ids,
 ):
-
     raw = {
         "sport_id": sport_id,
         "sport_level_id": sport_level,
         "role_id": role_id,
-        "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
     }
-    applied = filters_to_params(raw)
-    return applied, False, 0
+    return raw, False, 0
 
 
 @dash.callback(
@@ -552,12 +624,10 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 
     params = {"limit": limit, "offset": offset}
     requested_columns = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    fetch_columns = _dedupe_preserve_order(requested_columns + ["enrollment_status", "sport"])
+    fetch_columns = _dedupe_preserve_order(requested_columns + FILTER_FETCH_COLUMNS)
     cols = _columns_to_param(fetch_columns)
     if cols:
         params["columns"] = cols
-    if isinstance(applied_filters, dict) and applied_filters:
-        params.update(applied_filters)
 
     try:
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
@@ -571,7 +641,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
         else:
             rows = []
 
-        rows = _filter_allowed_enrollment_rows(rows)
+        rows = _apply_local_filters(rows, applied_filters)
         data = _normalize_rows(rows, requested_columns)
         return data, no_update, no_update, no_update
 
@@ -598,7 +668,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         raise PreventUpdate
 
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
+    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
 
     limit = 1000
     offset = 0
@@ -611,8 +681,6 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         params = {"limit": limit, "offset": offset}
         if cols:
             params["columns"] = cols
-        if isinstance(applied_filters, dict) and applied_filters:
-            params.update(applied_filters)
 
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
 
@@ -629,23 +697,25 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
             total = None
             next_url = None
 
-        rows = _filter_allowed_enrollment_rows(rows)
+        page_row_count = len(rows)
+        rows = _apply_local_filters(rows, applied_filters)
 
-        if not rows:
-            break
-
-        normalized = _normalize_rows(rows, keys)
-        for row in normalized:
-            writer.writerow(row)
+        if rows:
+            normalized = _normalize_rows(rows, keys)
+            for row in normalized:
+                writer.writerow(row)
 
         if next_url:
-            offset += len(rows)
+            offset += page_row_count
             continue
 
-        if total is not None and (offset + len(rows)) >= int(total):
+        if total is not None and (offset + page_row_count) >= int(total):
             break
 
-        offset += len(rows)
+        if page_row_count == 0:
+            break
+
+        offset += page_row_count
 
     filename = f"report_rows_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     return dict(content=buf.getvalue(), filename=filename, type="text/csv")
