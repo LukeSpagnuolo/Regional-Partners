@@ -613,6 +613,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     offset = max(page_current * page_size, 0)
 
     params = {"limit": limit, "offset": offset}
+    keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
 
     try:
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
@@ -627,7 +628,7 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
             rows = []
 
         rows = _apply_local_filters(rows, applied_filters)
-        data = _normalize_rows(rows, requested_columns)
+    data = _normalize_rows(rows, keys)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
