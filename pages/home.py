@@ -313,10 +313,12 @@ filters_layout = dmc.MantineProvider(
             data=ENROLLMENT_STATUS_OPTIONS,
             value=["ACTIVE", "EXPIRED"],
             placeholder="Select enrollment statuses...",
-            clearable=True,
+            clearable=False,
             searchable=True,
             comboboxProps={"withinPortal": False, "zIndex": 2000},
         ),
+
+        dbc.FormText("At least one enrollment status is required.", className="text-muted"),
 
         dbc.Button("Apply Filters", id="apply-filters", color="primary", className="mt-3"),
     ]
@@ -526,6 +528,15 @@ def apply_filters(
     }
     applied = filters_to_params(raw)
     return applied, False, 0
+
+
+@dash.callback(
+    Output("filter-enrollment-status", "value"),
+    Input("filter-enrollment-status", "value"),
+    prevent_initial_call=False,
+)
+def require_enrollment_selection(enrollment_status):
+    return enrollment_status or ["ACTIVE", "EXPIRED"]
 
 
 @dash.callback(
