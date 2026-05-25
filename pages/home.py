@@ -241,6 +241,38 @@ def _apply_local_filters(rows: list, applied_filters: dict | None) -> list:
 
     return out
 
+
+def _fetch_all_report_rows(params: dict) -> list:
+    all_rows: list = []
+    page_offset = int(params.get("offset", 0) or 0)
+    page_limit = int(params.get("limit", DEFAULT_PAGE_SIZE) or DEFAULT_PAGE_SIZE)
+
+    while True:
+        page_params = dict(params)
+        page_params["offset"] = page_offset
+        page_params["limit"] = page_limit
+
+        payload = reporting._GET_json(reporting.config.rows_url, params=page_params)
+
+        if isinstance(payload, dict):
+            rows = payload.get("results") or []
+            next_url = payload.get("next")
+        elif isinstance(payload, list):
+            rows = payload
+            next_url = None
+        else:
+            rows = []
+            next_url = None
+
+        all_rows.extend(rows)
+
+        if not next_url or not rows:
+            break
+
+        page_offset += len(rows)
+
+    return all_rows
+
 def filter_section(title: str, first: bool = False):
     return html.Div(
         title,
@@ -615,28 +647,20 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     page_size = int(page_size or DEFAULT_PAGE_SIZE)
 
     limit = max(page_size, 1)
-    offset = max(page_current * page_size, 0)
-
-    params = {"limit": limit, "offset": offset}
+    params = {"limit": limit, "offset": 0}
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
     cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
     if cols:
         params["columns"] = cols
 
     try:
-        payload = reporting._GET_json(reporting.config.rows_url, params=params)
-
-        if isinstance(payload, dict) and "results" in payload:
-            rows = payload.get("results") or []
-            total = payload.get("count", None)
-            _ = total
-        elif isinstance(payload, list):
-            rows = payload
-        else:
-            rows = []
-
+        rows = _fetch_all_report_rows(params)
         rows = _apply_local_filters(rows, applied_filters)
-        data = _normalize_rows(rows, keys)
+
+        start = page_current * page_size
+        end = start + page_size
+        page_rows = rows[start:end]
+        data = _normalize_rows(page_rows, keys)
         return data, no_update, no_update, no_update
 
     except ReportingClientError as e:
