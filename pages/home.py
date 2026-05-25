@@ -37,17 +37,6 @@ STATUS_OPTIONS = [
     {"label": "Superceded", "value": "SUPERSEDED"},
 ]
 
-NOM_STATUS_OPTIONS = [
-    {"label": "Active (default)", "value": "ACTIVE"},
-    {"label": "Expired", "value": "EXPIRED"},
-    {"label": "Superceded", "value": "SUPERSEDED"},
-]
-
-CLAIMED_STATUS_OPTIONS = [
-    {"label": "Claimed", "value": "true"},
-    {"label": "Unclaimed", "value": "false"},
-]
-
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
@@ -262,6 +251,30 @@ def filter_section(title: str, first: bool = False):
 
 filters_layout = dmc.MantineProvider(
     [
+        filter_section("Nearest Campus", first=True),
+
+        dbc.Label("Birthplace", className="mt-3"),
+        dmc.MultiSelect(
+            id="filter-birth-campus",
+            data=[],
+            value=[],
+            placeholder="Select Campuses...",
+            clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
+        ),
+
+        dbc.Label("Current Residence", className="mt-3"),
+        dmc.MultiSelect(
+            id="filter-current-campus",
+            data=[],
+            value=[],
+            placeholder="Select Campuses...",
+            clearable=True,
+            searchable=True,
+            comboboxProps={"withinPortal": False, "zIndex": 2000},
+        ),
+
         filter_section("Sport Info", first=True),
 
         dbc.Label("Organization", className="mt-3"),
@@ -295,46 +308,6 @@ filters_layout = dmc.MantineProvider(
             data=STATUS_OPTIONS,
             value=["ACTIVE", "EXPIRED"],
             placeholder="Select enrollment statuses...",
-            clearable=True,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
-        ),
-
-        dbc.Label("Nomination Status", className="mt-3"),
-        dcc.Dropdown(
-            id="filter-nomination-status",
-            options=NOM_STATUS_OPTIONS,
-            value=None,
-            clearable=True,
-        ),
-
-        dbc.Label("Nomination Claimed", className="mt-3"),
-        dcc.Dropdown(
-            id="filter-nomination-redeemed",
-            options=CLAIMED_STATUS_OPTIONS,
-            value=None,
-            clearable=True,
-        ),
-
-        filter_section("Nearest Campus"),
-
-        dbc.Label("Birthplace", className="mt-3"),
-        dmc.MultiSelect(
-            id="filter-birth-campus",
-            data=[],
-            value=[],
-            placeholder="Select Campuses...",
-            clearable=True,
-            searchable=True,
-            comboboxProps={"withinPortal": False, "zIndex": 2000},
-        ),
-
-        dbc.Label("Current Residence", className="mt-3"),
-        dmc.MultiSelect(
-            id="filter-current-campus",
-            data=[],
-            value=[],
-            placeholder="Select Campuses...",
             clearable=True,
             searchable=True,
             comboboxProps={"withinPortal": False, "zIndex": 2000},
@@ -520,8 +493,6 @@ def load_filters(_n):
     State("filter-organization", "value"),
     State("filter-role", "value"),
     State("filter-enrollment-status", "value"),
-    State("filter-nomination-status", "value"),
-    State("filter-nomination-redeemed", "value"),
     State("filter-card", "value"),
     State("filter-birth-campus", "value"),
     State("filter-current-campus", "value"),
@@ -534,8 +505,6 @@ def apply_filters(
     organization_id,
     role_id,
     enrollment_status,
-    nomination_status,
-    nomination_redeemed,
     card_ids,
     birth_campus_ids,
     current_campus_ids,
@@ -546,8 +515,6 @@ def apply_filters(
         "sport_org_id": organization_id,
         "role_id": role_id,
         "enrollment_status": enrollment_status,
-        "nomination_status": nomination_status,
-        "nomination_redeemed": nomination_redeemed,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
