@@ -24,7 +24,7 @@ cfg = ReportingAPIConfig(
 )
 reporting = ReportingClient(cfg, token_getter=auth.get_token)
 
-DEFAULT_COLUMNS = ["last_name", "first_name", "athlete_ethnicity"]
+DEFAULT_COLUMNS = ["first_name", "last_name", "sport", "email"]
 DEFAULT_PAGE_SIZE = 25
 
 SEEDED_OPTIONS = [{"label": k, "value": k} for k in DEFAULT_COLUMNS]
