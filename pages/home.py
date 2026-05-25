@@ -40,16 +40,6 @@ STATUS_OPTIONS = [
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
-FILTER_FETCH_COLUMNS = [
-    "enrollment_status",
-    "sport",
-    "sport_id",
-    "sport_level_id",
-    "role_id",
-    "athlete_carding_ids",
-    "birth_city_campus_id",
-    "residence_city_campus_id",
-]
 
 def _columns_to_list(value) -> list[str]:
     if not value:
@@ -623,11 +613,6 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
     offset = max(page_current * page_size, 0)
 
     params = {"limit": limit, "offset": offset}
-    requested_columns = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    fetch_columns = _dedupe_preserve_order(requested_columns + FILTER_FETCH_COLUMNS)
-    cols = _columns_to_param(fetch_columns)
-    if cols:
-        params["columns"] = cols
 
     try:
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
@@ -668,7 +653,6 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
         raise PreventUpdate
 
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
-    cols = _columns_to_param(_dedupe_preserve_order(keys + FILTER_FETCH_COLUMNS))
 
     limit = 1000
     offset = 0
@@ -679,8 +663,6 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
 
     while True:
         params = {"limit": limit, "offset": offset}
-        if cols:
-            params["columns"] = cols
 
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
 
