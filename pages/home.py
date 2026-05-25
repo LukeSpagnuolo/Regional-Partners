@@ -293,7 +293,7 @@ filters_layout = dmc.MantineProvider(
         dmc.MultiSelect(
             id="filter-enrollment-status",
             data=STATUS_OPTIONS,
-            value=[],
+            value=["ACTIVE", "EXPIRED"],
             placeholder="Select enrollment statuses...",
             clearable=True,
             searchable=True,
@@ -385,7 +385,7 @@ layout = dbc.Container(
         dcc.Interval(id="init-load", interval=1, n_intervals=0, max_intervals=1),
 
         dcc.Store(id="columns-meta-store"),
-        dcc.Store(id="applied-filters-store", data={}),
+        dcc.Store(id="applied-filters-store", data={"enrollment_status": ["ACTIVE", "EXPIRED"]}),
         dcc.Store(id="applied-columns-store", data=DEFAULT_COLUMNS),
         dcc.Download(id="download-csv"),
 
