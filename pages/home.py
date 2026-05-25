@@ -614,6 +614,9 @@ def fetch_rows(page_current, page_size, columns_value, applied_filters):
 
     params = {"limit": limit, "offset": offset}
     keys = _columns_to_list(columns_value) or list(DEFAULT_COLUMNS)
+    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
+    if cols:
+        params["columns"] = cols
 
     try:
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
@@ -657,6 +660,7 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
 
     limit = 1000
     offset = 0
+    cols = _columns_to_param(_dedupe_preserve_order(keys + ["enrollment_status", "sport"]))
 
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
@@ -664,6 +668,8 @@ def download_full_dataset(n_clicks, columns_value, applied_filters):
 
     while True:
         params = {"limit": limit, "offset": offset}
+        if cols:
+            params["columns"] = cols
 
         payload = reporting._GET_json(reporting.config.rows_url, params=params)
 
