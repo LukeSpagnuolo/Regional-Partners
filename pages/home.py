@@ -37,6 +37,11 @@ STATUS_OPTIONS = [
     {"label": "Superceded", "value": "SUPERSEDED"},
 ]
 
+ENROLLMENT_STATUS_OPTIONS = [
+    {"label": "Active", "value": "ACTIVE"},
+    {"label": "Expired", "value": "EXPIRED"},
+]
+
 HIDDEN_ENROLLMENT_STATUS = ["ACTIVE", "EXPIRED"]
 HIDDEN_ENROLLMENT_STATUS_SET = {status.upper() for status in HIDDEN_ENROLLMENT_STATUS}
 HIDDEN_SPORTS = {"cinderball", "skimboard cross", "nordic vaulting"}
@@ -305,7 +310,7 @@ filters_layout = dmc.MantineProvider(
         dbc.Label("Enrollment Status", className="mt-3"),
         dmc.MultiSelect(
             id="filter-enrollment-status",
-            data=STATUS_OPTIONS,
+            data=ENROLLMENT_STATUS_OPTIONS,
             value=["ACTIVE", "EXPIRED"],
             placeholder="Select enrollment statuses...",
             clearable=True,
