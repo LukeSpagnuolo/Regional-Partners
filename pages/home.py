@@ -458,11 +458,11 @@ def load_filters(_n):
     except Exception:
         raise PreventUpdate
 
-    campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "name")
-    role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "verbose_name")
-    sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "name")
-    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "name")
-    level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "name")
+    campus_options = fetch_options("/api/registration/campus/", auth.get_token(), "name", "id")
+    role_options = fetch_options("/api/registration/role/", auth.get_token(), "verbose_name", "id")
+    sport_options = fetch_options("/api/registration/sport/", auth.get_token(), "name", "id")
+    card_options = fetch_options("/api/registration/card", auth.get_token(), "name", "id")
+    level_options = fetch_options("/api/registration/sportlevel/", auth.get_token(), "name", "id")
 
     return role_options, campus_options, campus_options, sport_options, card_options, level_options
 
