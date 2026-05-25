@@ -483,6 +483,17 @@ def load_columns_options(_n_intervals, current_value):
         return options, current, current, payload, "Loaded columns metadata.", "success", True
 
     except ReportingClientError as e:
+        message = str(e)
+        if "403 Forbidden" in message or "403" in message:
+            return (
+                SEEDED_OPTIONS,
+                current,
+                current,
+                None,
+                "Column metadata is not available for this account; using default columns.",
+                "warning",
+                True,
+            )
         return (
             SEEDED_OPTIONS,
             current,
