@@ -419,7 +419,6 @@ def apply_filters(
         "sport_id": sport_id,
         "sport_level_id": sport_level,
         "role_id": role_id,
-        "enrollment_status": HIDDEN_ENROLLMENT_STATUS,
         "athlete_carding_ids": card_ids,
         "birth_city_campus_id": birth_campus_ids,
         "residence_city_campus_id": current_campus_ids,
